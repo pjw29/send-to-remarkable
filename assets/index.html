@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send to reMarkable</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .email-display {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+        .code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .api-docs {
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+        .endpoint {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+        }
+        .method {
+            font-weight: bold;
+            color: #28a745;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>📄 Send to reMarkable</h1>
+    
+    <div class="container">
+        <h2>Setup Your Device</h2>
+        <p>First, get a link code from your reMarkable device:</p>
+        <ol>
+            <li>Go to <a href="https://my.remarkable.com/#mobile">https://my.remarkable.com/#mobile</a></li>
+            <li>Log in with your reMarkable account</li>
+            <li>Copy the 8-character code that appears</li>
+            <li>Enter it below:</li>
+        </ol>
+        
+        <div class="form-group">
+            <label for="linkCode">Link Code:</label>
+            <input type="text" id="linkCode" placeholder="ABCD1234" maxlength="8" style="text-transform: lowercase;">
+        </div>
+        
+        <button onclick="registerDevice()">Register Device (this takes a while!)</button>
+        
+        <div id="registrationResult"></div>
+        
+        <div id="emailInstructions" style="display: none;">
+            <div class="email-display">
+                <h3>📧 Your Upload Email:</h3>
+                <p><strong id="uploadEmail"></strong></p>
+                <p>Send any PDF or EPUB to this email address and it will automatically appear on your reMarkable! You can also set your readwise kindle email to this (through some hackery), and use their send-to-kindle function with the remarkable.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Web Upload</h2>
+        <p>If you have your Auth ID, you can upload files directly here:</p>
+        
+        <div class="form-group">
+            <label for="authId">Auth ID:</label>
+            <input type="text" id="authId" placeholder="Your auth ID from registration">
+        </div>
+        
+        <div class="form-group">
+            <label for="fileUpload">File:</label>
+            <input type="file" id="fileUpload" accept=".pdf,.epub">
+        </div>
+        
+        <button onclick="uploadFile()">Upload File</button>
+        
+        <div id="uploadResult"></div>
+    </div>
+
+    <div class="api-docs">
+        <h2>🔧 API Documentation</h2>
+        <p>You can also use this service programmatically:</p>
+        
+        <div class="endpoint">
+            <div class="method">POST /register</div>
+            <p>Register a new device with a link code</p>
+            <pre>curl -X POST "https://send-to-remarkable.zegs.me/register" \\
+  -H "Content-Type: application/json" \\
+  -d '{"linkCode": "ABCD1234"}'</pre>
+        </div>
+        
+        <div class="endpoint">
+            <div class="method">POST /upload</div>
+            <p>Upload a file using Auth ID (the first part of your email)</p>
+            <pre>curl -X POST "https://send-to-remarkable.zegs.me/upload" \\
+  -F "file=@document.pdf" \\
+  -F "authId=your-auth-id-here"</pre>
+        </div>
+        
+        <div class="endpoint">
+            <div class="method">GET /auth/:authId/status</div>
+            <p>Check authentication status</p>
+            <pre>curl "https://send-to-remarkable.zegs.me/auth/your-auth-id/status"</pre>
+        </div>
+        
+        <div class="endpoint">
+            <div class="method">DELETE /auth/:authId</div>
+            <p>Delete an auth ID. This will delete the token, and make the auth ID invalid</p>
+            <pre>curl -X DELETE "https://send-to-remarkable.zegs.me/auth/your-auth-id"</pre>
+        </div>
+
+    </div>
+
+    <script>
+        async function registerDevice() {
+            const linkCode = document.getElementById('linkCode').value.trim().toLowerCase();
+            const resultDiv = document.getElementById('registrationResult');
+            
+            if (!linkCode || linkCode.length !== 8) {
+                resultDiv.innerHTML = '<div class="error">Please enter a valid 8-character link code</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ linkCode: linkCode }),
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `<div class="success">
+                        <strong>Device registered successfully!</strong><br>
+                        Auth ID: <span class="code">${result.authId}</span><br>
+                        Keep your Auth ID safe - you'll need it for uploads!
+                    </div>`;
+                    
+                    // Show email instructions
+                    document.getElementById('uploadEmail').textContent = `${result.authId}@send-to-remarkable.zegs.me`;
+                    document.getElementById('emailInstructions').style.display = 'block';
+                    document.getElementById('authId').value = result.authId;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">Registration failed: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Registration failed: ${error.message}</div>`;
+            }
+        }
+        
+        async function uploadFile() {
+            const authId = document.getElementById('authId').value.trim();
+            const fileInput = document.getElementById('fileUpload');
+            const resultDiv = document.getElementById('uploadResult');
+            
+            if (!authId) {
+                resultDiv.innerHTML = '<div class="error">Please enter your Auth ID</div>';
+                return;
+            }
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                resultDiv.innerHTML = '<div class="error">Please select a file</div>';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('authId', authId);
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `<div class="success">
+                        <strong>File uploaded successfully!</strong><br>
+                        File: ${result.fileName}<br>
+                        Workflow ID: <span class="code">${result.workflowId}</span><br>
+                        Your file will appear on your reMarkable shortly!
+                    </div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">Upload failed: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Upload failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Auto-format link code input
+        document.getElementById('linkCode').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "send-to-remarkable",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-08-03",
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	},
+	"workers_dev": false,
+	"route": {
+		"custom_domain": true,
+		"pattern": "send-to-remarkable.zegs.me"
+	},
+	"workflows": [
+		{
+			"name": "remarkable-upload-workflow",
+			"binding": "MY_WORKFLOW",
+			"class_name": "RemarkableUploadWorkflow"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "AUTH_DO",
+				"class_name": "AuthDO"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": [
+				"AuthDO"
+			]
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "DOCUMENT_STORAGE",
+			"bucket_name": "send-to-remarkable-docs"
+		}
+	],
+
+	"assets": { "directory": "./assets/", "binding": "ASSETS" },
+}
