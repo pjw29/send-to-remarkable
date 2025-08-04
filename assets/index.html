@@ -65,6 +65,14 @@
             border-radius: 5px;
             margin: 10px 0;
         }
+        .loading {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #ffc107;
+        }
         .email-display {
             background: #e3f2fd;
             padding: 20px;
@@ -106,6 +114,17 @@
 <body>
     <h1>📄 Send to reMarkable</h1>
     
+    <div class="container">
+        <h2>What is this?</h2>
+        <p>This service allows you to send documents directly to your reMarkable tablet in three ways:</p>
+        <ul>
+            <li><strong>📧 Email uploads:</strong> Send PDFs or EPUBs to a specific email address and they'll automatically appear on your reMarkable</li>
+            <li><strong>🌐 Web uploads:</strong> Upload files directly through this website (more of a proof of concept)</li>
+            <li><strong>🔌 API uploads:</strong> Integrate with other services using our REST API</li>
+        </ul>
+        <p>I made this because I wanted Readwise Reader's send-to-Kindle functionality to work with my reMarkable tablet. Now it does!</p>
+    </div>
+
     <div class="container">
         <h2>Setup Your Device</h2>
         <p>First, get a link code from your reMarkable device:</p>
@@ -153,6 +172,21 @@
         <div id="uploadResult"></div>
     </div>
 
+    <div class="container">
+        <h2>Manage Your Auth ID</h2>
+        <p>Check the status of your Auth ID or delete it if you no longer need it:</p>
+        
+        <div class="form-group">
+            <label for="manageAuthId">Auth ID:</label>
+            <input type="text" id="manageAuthId" placeholder="Your auth ID">
+        </div>
+        
+        <button onclick="checkStatus()">Check Status</button>
+        <button onclick="destroyAuth()" style="background: #dc3545;">Delete Auth ID</button>
+        
+        <div id="manageResult"></div>
+    </div>
+
     <div class="api-docs">
         <h2>🔧 API Documentation</h2>
         <p>You can also use this service programmatically:</p>
@@ -160,42 +194,86 @@
         <div class="endpoint">
             <div class="method">POST /register</div>
             <p>Register a new device with a link code</p>
-            <pre>curl -X POST "https://send-to-remarkable.zegs.me/register" \\
-  -H "Content-Type: application/json" \\
+            <pre>curl -X POST "https://your-domain.com/register" \
+  -H "Content-Type: application/json" \
   -d '{"linkCode": "ABCD1234"}'</pre>
         </div>
         
         <div class="endpoint">
             <div class="method">POST /upload</div>
             <p>Upload a file using Auth ID (the first part of your email)</p>
-            <pre>curl -X POST "https://send-to-remarkable.zegs.me/upload" \\
-  -F "file=@document.pdf" \\
+            <pre>curl -X POST "https://your-domain.com/upload" \
+  -F "file=@document.pdf" \
   -F "authId=your-auth-id-here"</pre>
         </div>
         
         <div class="endpoint">
             <div class="method">GET /auth/:authId/status</div>
             <p>Check authentication status</p>
-            <pre>curl "https://send-to-remarkable.zegs.me/auth/your-auth-id/status"</pre>
+            <pre>curl "https://your-domain.com/auth/your-auth-id/status"</pre>
         </div>
         
         <div class="endpoint">
             <div class="method">DELETE /auth/:authId</div>
             <p>Delete an auth ID. This will delete the token, and make the auth ID invalid</p>
-            <pre>curl -X DELETE "https://send-to-remarkable.zegs.me/auth/your-auth-id"</pre>
+            <pre>curl -X DELETE "https://your-domain.com/auth/your-auth-id"</pre>
         </div>
 
     </div>
 
     <script>
+        // Get the current domain for dynamic URLs
+        const currentDomain = window.location.host;
+        
+        // Utility function to safely set HTML content
+        function setResult(elementId, type, message, data = {}) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = ''; // Clear existing content
+            
+            const div = document.createElement('div');
+            div.className = type;
+            
+            if (type === 'loading') {
+                div.innerHTML = '⏳ ' + message;
+            } else {
+                const messageEl = document.createElement('div');
+                messageEl.innerHTML = message;
+                div.appendChild(messageEl);
+                
+                // Add data elements safely
+                Object.entries(data).forEach(([key, value]) => {
+                    const dataEl = document.createElement('div');
+                    dataEl.innerHTML = `${key}: `;
+                    const codeEl = document.createElement('span');
+                    codeEl.className = 'code';
+                    codeEl.textContent = value;
+                    dataEl.appendChild(codeEl);
+                    div.appendChild(dataEl);
+                });
+            }
+            
+            element.appendChild(div);
+        }
+        
+        // Update API documentation with current domain
+        function updateApiDocs() {
+            const preElements = document.querySelectorAll('pre');
+            preElements.forEach(pre => {
+                pre.textContent = pre.textContent.replace(/https:\/\/your-domain\.com/g, `https://${currentDomain}`);
+            });
+        }
+        
         async function registerDevice() {
             const linkCode = document.getElementById('linkCode').value.trim().toLowerCase();
-            const resultDiv = document.getElementById('registrationResult');
+            const resultDiv = 'registrationResult';
             
             if (!linkCode || linkCode.length !== 8) {
-                resultDiv.innerHTML = '<div class="error">Please enter a valid 8-character link code</div>';
+                setResult(resultDiv, 'error', 'Please enter a valid 8-character link code');
                 return;
             }
+            
+            // Show loading state
+            setResult(resultDiv, 'loading', 'Registering device... This may take 30-60 seconds, please wait!');
             
             try {
                 const response = await fetch('/register', {
@@ -209,38 +287,39 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    resultDiv.innerHTML = `<div class="success">
-                        <strong>Device registered successfully!</strong><br>
-                        Auth ID: <span class="code">${result.authId}</span><br>
-                        Keep your Auth ID safe - you'll need it for uploads!
-                    </div>`;
+                    setResult(resultDiv, 'success', '<strong>Device registered successfully!</strong><br>Keep your Auth ID safe - you\'ll need it for uploads!', {
+                        'Auth ID': result.authId
+                    });
                     
                     // Show email instructions
-                    document.getElementById('uploadEmail').textContent = `${result.authId}@send-to-remarkable.zegs.me`;
+                    const uploadEmailEl = document.getElementById('uploadEmail');
+                    uploadEmailEl.textContent = `${result.authId}@${currentDomain}`;
                     document.getElementById('emailInstructions').style.display = 'block';
                     document.getElementById('authId').value = result.authId;
                 } else {
-                    resultDiv.innerHTML = `<div class="error">Registration failed: ${result.error}</div>`;
+                    setResult(resultDiv, 'error', `Registration failed: ${result.error}`);
                 }
             } catch (error) {
-                resultDiv.innerHTML = `<div class="error">Registration failed: ${error.message}</div>`;
+                setResult(resultDiv, 'error', `Registration failed: ${error.message}`);
             }
         }
         
         async function uploadFile() {
             const authId = document.getElementById('authId').value.trim();
             const fileInput = document.getElementById('fileUpload');
-            const resultDiv = document.getElementById('uploadResult');
+            const resultDiv = 'uploadResult';
             
             if (!authId) {
-                resultDiv.innerHTML = '<div class="error">Please enter your Auth ID</div>';
+                setResult(resultDiv, 'error', 'Please enter your Auth ID');
                 return;
             }
             
             if (!fileInput.files || fileInput.files.length === 0) {
-                resultDiv.innerHTML = '<div class="error">Please select a file</div>';
+                setResult(resultDiv, 'error', 'Please select a file');
                 return;
             }
+            
+            setResult(resultDiv, 'loading', 'Uploading file...');
             
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
@@ -255,23 +334,91 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    resultDiv.innerHTML = `<div class="success">
-                        <strong>File uploaded successfully!</strong><br>
-                        File: ${result.fileName}<br>
-                        Workflow ID: <span class="code">${result.workflowId}</span><br>
-                        Your file will appear on your reMarkable shortly!
-                    </div>`;
+                    setResult(resultDiv, 'success', '<strong>File uploaded successfully!</strong><br>Your file will appear on your reMarkable shortly!', {
+                        'File': result.fileName,
+                        'Workflow ID': result.workflowId
+                    });
                 } else {
-                    resultDiv.innerHTML = `<div class="error">Upload failed: ${result.error}</div>`;
+                    setResult(resultDiv, 'error', `Upload failed: ${result.error}`);
                 }
             } catch (error) {
-                resultDiv.innerHTML = `<div class="error">Upload failed: ${error.message}</div>`;
+                setResult(resultDiv, 'error', `Upload failed: ${error.message}`);
+            }
+        }
+        
+        async function checkStatus() {
+            const authId = document.getElementById('manageAuthId').value.trim();
+            const resultDiv = 'manageResult';
+            
+            if (!authId) {
+                setResult(resultDiv, 'error', 'Please enter your Auth ID');
+                return;
+            }
+            
+            setResult(resultDiv, 'loading', 'Checking status...');
+            
+            try {
+                const response = await fetch(`/auth/${authId}/status`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const statusMessage = result.registered ? 
+                        '<strong>✅ Active:</strong> Your Auth ID is valid and ready to use!' :
+                        '<strong>❌ Inactive:</strong> This Auth ID is not registered or has expired.';
+                    
+                    setResult(resultDiv, result.registered ? 'success' : 'error', statusMessage, {
+                        'Device ID': result.device_id || 'N/A',
+                        'Token Status': result.access_token_valid ? 'Valid' : 'Invalid/Expired'
+                    });
+                } else {
+                    setResult(resultDiv, 'error', `Status check failed: ${result.error}`);
+                }
+            } catch (error) {
+                setResult(resultDiv, 'error', `Status check failed: ${error.message}`);
+            }
+        }
+        
+        async function destroyAuth() {
+            const authId = document.getElementById('manageAuthId').value.trim();
+            const resultDiv = 'manageResult';
+            
+            if (!authId) {
+                setResult(resultDiv, 'error', 'Please enter your Auth ID');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete Auth ID "${authId}"? This action cannot be undone and you'll need to register again to use this Auth ID.`)) {
+                return;
+            }
+            
+            setResult(resultDiv, 'loading', 'Deleting Auth ID...');
+            
+            try {
+                const response = await fetch(`/auth/${encodeURIComponent(authId)}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    setResult(resultDiv, 'success', '<strong>Auth ID deleted successfully!</strong><br>The Auth ID and all associated data have been permanently removed.');
+                    document.getElementById('manageAuthId').value = '';
+                } else {
+                    setResult(resultDiv, 'error', `Deletion failed: ${result.error}`);
+                }
+            } catch (error) {
+                setResult(resultDiv, 'error', `Deletion failed: ${error.message}`);
             }
         }
         
         // Auto-format link code input
         document.getElementById('linkCode').addEventListener('input', function(e) {
             e.target.value = e.target.value.toUpperCase();
+        });
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateApiDocs();
         });
     </script>
 </body>
