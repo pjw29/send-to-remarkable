@@ -47,4 +47,7 @@
 	],
 
 	"assets": { "directory": "./assets/", "binding": "ASSETS" },
+	"vars": {
+		"SIGNUP_DISABLED": "true",
+	}
 }

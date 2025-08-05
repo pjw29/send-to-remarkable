@@ -125,7 +125,14 @@
         <p>I made this because I wanted Readwise Reader's send-to-Kindle functionality to work with my reMarkable tablet. Now it does!</p>
     </div>
 
-    <div class="container">
+    <div class="container" id="signupDisabledContainer" style="display: none;">
+        <h2>🚫 Signup Disabled</h2>
+        <p>New device registrations are disabled on this instance.</p>
+        <p>If you operate this instance, set the `SIGNUP_DISABLED` environment variable to `false` to enable registrations.</p>
+        <p>To create your own instance, check out the <a href="https://github.com/zegevlier/send-to-remarkable">GitHub repository</a> for self-hosting instructions.</p>
+    </div>
+
+    <div class="container" id="setupContainer" style="display: none;">
         <h2>Setup Your Device</h2>
         <p>First, get a link code from your reMarkable device:</p>
         <ol>
@@ -261,6 +268,26 @@
             preElements.forEach(pre => {
                 pre.textContent = pre.textContent.replace(/https:\/\/your-domain\.com/g, `https://${currentDomain}`);
             });
+        }
+        
+        // Check if signup is enabled on this instance
+        async function checkSignupStatus() {
+            try {
+                const response = await fetch('/signup-enabled');
+                const result = await response.json();
+                
+                if (result.signupEnabled) {
+                    // Show the setup container
+                    document.getElementById('setupContainer').style.display = 'block';
+                } else {
+                    // Show the signup disabled message
+                    document.getElementById('signupDisabledContainer').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Failed to check signup status:', error);
+                // Default to showing setup if we can't determine status
+                document.getElementById('setupContainer').style.display = 'block';
+            }
         }
         
         async function registerDevice() {
@@ -419,6 +446,7 @@
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             updateApiDocs();
+            checkSignupStatus();
         });
     </script>
 </body>

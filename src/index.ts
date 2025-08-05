@@ -17,8 +17,18 @@ app.get('/', (c) => {
 	return env.ASSETS.fetch('/index.html');
 });
 
+app.get('/signup-enabled', (c) => {
+	// @ts-ignore - The exact value of the env var is in the types, so comparing it results in an error.
+	return c.json({ signupEnabled: c.env.SIGNUP_DISABLED === "false" });
+});
+
 // Route to register a new device with a link code
 app.post('/register', async (c) => {
+	// @ts-ignore - The exact value of the env var is in the types, so comparing it results in an error.
+	if (c.env.SIGNUP_DISABLED !== "false") {
+		console.error('Signup is currently disabled');
+		return c.json({ error: "Signup is currently disabled" }, 403);
+	}
 	try {
 		const { linkCode } = await c.req.json();
 		console.log(`Registration attempt with link code: ${linkCode}`);
