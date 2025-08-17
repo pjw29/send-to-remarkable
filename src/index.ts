@@ -179,12 +179,6 @@ export default {
 			message.setReject("Email must have a 'to' address");
 			return;
 		}
-		const toAddress = email.to.find(addr => (addr.address ?? "").endsWith('@send-to-remarkable.zegs.me'));
-		if (!toAddress) {
-			console.error('Email "to" address does not end with @send-to-remarkable.zegs.me');
-			message.setReject("Email must be sent to an address ending with @send-to-remarkable.zegs.me");
-			return;
-		}
 		const authDoId = toAddress.address?.split('@')[0];
 		if (!authDoId) {
 			console.error('Failed to extract authDoId from email "to" address');
