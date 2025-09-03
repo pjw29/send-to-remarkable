@@ -14,7 +14,7 @@
 	"workers_dev": false,
 	"route": {
 		"custom_domain": true,
-		"pattern": "send-to-remarkable.zegs.me"
+		"pattern": "send-to-remarkable.teammaul.pw"
 	},
 	"workflows": [
 		{
