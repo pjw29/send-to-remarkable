@@ -180,7 +180,7 @@ export default {
 			return;
 		}
 		console.log('email.to:', email.to, typeof email.to);
-		const authDoId = email.to.split('@')[0];
+		const authDoId = email.to.address.split('@')[0];
 		if (!authDoId) {
 			console.error('Failed to extract authDoId from email "to" address');
 			message.setReject("Failed to extract authentication ID from email address");
